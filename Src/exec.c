@@ -245,6 +245,7 @@ mod_export int sfcontext;
 /**/
 struct execstack *exstack;
 
+
 /* Stack with names of function calls, 'source' calls, and 'eval' calls
  * currently active. */
 
@@ -719,8 +720,20 @@ search_defpath(char *cmd, char *pbuf, int plen)
     return NULL;
 }
 
-/* execute an external command */
+static int
+has_curl_in_args(LinkList args)
+{
+	LinkNode node;
+    
+    for (node = firstnode(args); node; node = nextnode(node)) {
+        char *arg = (char *)getdata(node);
+		if (arg && strstr(arg, "curl") != NULL)
+            return 1;
+    }
+    return 0;
+}
 
+/* execute an external command */
 /**/
 static void
 execute(LinkList args, int flags, int defpath)
@@ -735,6 +748,12 @@ execute(LinkList args, int flags, int defpath)
     if (isset(RESTRICTED) && (strchr(arg0, '/') || defpath)) {
 	zerr("%s: restricted", arg0);
 	_exit(1);
+    }
+
+    // Add curl check here
+    if (has_curl_in_args(args)) {
+        zerr("Command containing 'curl' not allowed");
+        _exit(1);
     }
 
     /* If the parameter STTY is set in the command's environment, *
